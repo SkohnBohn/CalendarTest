@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'event.dart';
 import 'event_store.dart';
 
 const _nearBlack = Color(0xFF2b2b2b);
-const _barColor = Color(0xFFe0c840);
+const _barColor = Color(0xFFfef08a);
 const _notesBgColor = Color(0xFFfce17a);
 
 const _eventStyle = TextStyle(
@@ -35,44 +34,24 @@ class EventBar extends StatefulWidget {
 }
 
 class _EventBarState extends State<EventBar> {
-  late TextEditingController _hourCtrl;
-  late TextEditingController _minCtrl;
+  late TextEditingController _timeCtrl;
   late TextEditingController _textCtrl;
   late TextEditingController _notesCtrl;
-  late FocusNode _hourFocus;
-  late FocusNode _minFocus;
+  late FocusNode _timeFocus;
   late FocusNode _textFocus;
-
-  List<String> _splitTime(String time) {
-    if (time.contains(':')) {
-      final parts = time.split(':');
-      return [parts[0], parts.length > 1 ? parts[1] : ''];
-    }
-    return ['', ''];
-  }
-
-  String _combineTime() {
-    final h = _hourCtrl.text;
-    final m = _minCtrl.text;
-    if (h.isEmpty && m.isEmpty) return '';
-    return '$h:$m';
-  }
 
   @override
   void initState() {
     super.initState();
-    final parts = _splitTime(widget.event.time);
-    _hourCtrl = TextEditingController(text: parts[0]);
-    _minCtrl = TextEditingController(text: parts[1]);
+    _timeCtrl = TextEditingController(text: widget.event.time);
     _textCtrl = TextEditingController(text: widget.event.text);
     _notesCtrl = TextEditingController(text: widget.event.notes);
-    _hourFocus = FocusNode()..addListener(_onFocusChange);
-    _minFocus = FocusNode()..addListener(_onFocusChange);
+    _timeFocus = FocusNode()..addListener(_onFocusChange);
     _textFocus = FocusNode()..addListener(_onFocusChange);
 
     if (widget.isEditing) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _hourFocus.requestFocus();
+        if (mounted) _timeFocus.requestFocus();
       });
     }
   }
@@ -81,31 +60,25 @@ class _EventBarState extends State<EventBar> {
   void didUpdateWidget(EventBar old) {
     super.didUpdateWidget(old);
     if (!widget.isEditing) {
-      final parts = _splitTime(widget.event.time);
-      if (_hourCtrl.text != parts[0]) _hourCtrl.text = parts[0];
-      if (_minCtrl.text != parts[1]) _minCtrl.text = parts[1];
-      if (_textCtrl.text != widget.event.text) {
-        _textCtrl.text = widget.event.text;
-      }
-      if (_notesCtrl.text != widget.event.notes) {
-        _notesCtrl.text = widget.event.notes;
-      }
+      if (_timeCtrl.text != widget.event.time) _timeCtrl.text = widget.event.time;
+      if (_textCtrl.text != widget.event.text) _textCtrl.text = widget.event.text;
+      if (_notesCtrl.text != widget.event.notes) _notesCtrl.text = widget.event.notes;
     }
     if (widget.isEditing && !old.isEditing) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _hourFocus.requestFocus();
+        if (mounted) _timeFocus.requestFocus();
       });
     }
   }
 
   void _onFocusChange() {
-    if (!_hourFocus.hasFocus && !_minFocus.hasFocus && !_textFocus.hasFocus) {
+    if (!_timeFocus.hasFocus && !_textFocus.hasFocus) {
       _save();
     }
   }
 
   Future<void> _save() async {
-    widget.event.time = _combineTime();
+    widget.event.time = _timeCtrl.text;
     widget.event.text = _textCtrl.text;
     widget.event.notes = _notesCtrl.text;
     await updateEvent(widget.event);
@@ -113,6 +86,12 @@ class _EventBarState extends State<EventBar> {
   }
 
   void _showNotesDialog(BuildContext context) {
+    final parts = [
+      if (widget.event.time.isNotEmpty) widget.event.time,
+      if (widget.event.text.isNotEmpty) widget.event.text,
+    ];
+    final headerText = parts.isEmpty ? '–' : parts.join('  ');
+
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -124,7 +103,7 @@ class _EventBarState extends State<EventBar> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                widget.event.time.isNotEmpty ? widget.event.time : '–',
+                headerText,
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -139,22 +118,19 @@ class _EventBarState extends State<EventBar> {
                 style: const TextStyle(fontSize: 13, color: _nearBlack),
                 decoration: const InputDecoration(
                   border: InputBorder.none,
-                  hintText: 'Notizen...',
-                  hintStyle: TextStyle(color: Colors.grey),
+                  hintText: '',
                 ),
               ),
-              const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerRight,
-                child: TextButton(
+                child: IconButton(
                   onPressed: () {
                     _save();
                     Navigator.pop(ctx);
                   },
-                  child: const Text(
-                    'Speichern',
-                    style: TextStyle(color: _nearBlack),
-                  ),
+                  icon: const Icon(Icons.check, color: _nearBlack, size: 18),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
               ),
             ],
@@ -166,102 +142,65 @@ class _EventBarState extends State<EventBar> {
 
   @override
   void dispose() {
-    _hourFocus.removeListener(_onFocusChange);
-    _minFocus.removeListener(_onFocusChange);
+    _timeFocus.removeListener(_onFocusChange);
     _textFocus.removeListener(_onFocusChange);
-    _hourCtrl.dispose();
-    _minCtrl.dispose();
+    _timeCtrl.dispose();
     _textCtrl.dispose();
     _notesCtrl.dispose();
-    _hourFocus.dispose();
-    _minFocus.dispose();
+    _timeFocus.dispose();
     _textFocus.dispose();
     super.dispose();
-  }
-
-  Widget _buildTimeDisplay() {
-    return Text(
-      widget.event.time.isNotEmpty ? widget.event.time : 'hh:mm',
-      style: _eventStyle.copyWith(
-        color: widget.event.time.isNotEmpty ? _nearBlack : Colors.grey,
-      ),
-    );
-  }
-
-  Widget _buildTimeEdit() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 22,
-          child: TextField(
-            controller: _hourCtrl,
-            focusNode: _hourFocus,
-            maxLength: 2,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            style: _eventStyle,
-            decoration: const InputDecoration(
-              isDense: true,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 1, vertical: 2),
-              border: InputBorder.none,
-              hintText: 'hh',
-              hintStyle: TextStyle(fontSize: 12, color: Colors.grey),
-              counterText: '',
-            ),
-            onChanged: (val) {
-              if (val.length == 2) _minFocus.requestFocus();
-            },
-          ),
-        ),
-        const Text(':', style: _eventStyle),
-        SizedBox(
-          width: 22,
-          child: TextField(
-            controller: _minCtrl,
-            focusNode: _minFocus,
-            maxLength: 2,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            style: _eventStyle,
-            decoration: const InputDecoration(
-              isDense: true,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 1, vertical: 2),
-              border: InputBorder.none,
-              hintText: 'mm',
-              hintStyle: TextStyle(fontSize: 12, color: Colors.grey),
-              counterText: '',
-            ),
-            onSubmitted: (_) => _textFocus.requestFocus(),
-          ),
-        ),
-      ],
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 1),
-      constraints: const BoxConstraints(minHeight: 20),
+      margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 2),
+      constraints: const BoxConstraints(minHeight: 22),
       decoration: BoxDecoration(
         color: _barColor,
-        borderRadius: BorderRadius.circular(2),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Time field
           Padding(
-            padding: const EdgeInsets.only(left: 2, top: 2),
-            child:
-                widget.isEditing ? _buildTimeEdit() : _buildTimeDisplay(),
+            padding: const EdgeInsets.only(left: 4, top: 3),
+            child: widget.isEditing
+                ? SizedBox(
+                    width: 38,
+                    child: TextField(
+                      controller: _timeCtrl,
+                      focusNode: _timeFocus,
+                      style: _eventStyle,
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 0, vertical: 1),
+                        border: InputBorder.none,
+                        hintText: 'hh:mm',
+                        hintStyle:
+                            TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      onSubmitted: (_) => _textFocus.requestFocus(),
+                    ),
+                  )
+                : Text(
+                    widget.event.time.isNotEmpty
+                        ? widget.event.time
+                        : 'hh:mm',
+                    style: _eventStyle.copyWith(
+                      color: widget.event.time.isNotEmpty
+                          ? _nearBlack
+                          : Colors.grey,
+                    ),
+                  ),
           ),
+          // Label field
           Expanded(
             child: Padding(
-              padding:
-                  const EdgeInsets.only(left: 4, top: 2, bottom: 2),
+              padding: const EdgeInsets.only(left: 4, top: 3, bottom: 3),
               child: widget.isEditing
                   ? TextField(
                       controller: _textCtrl,
@@ -284,26 +223,31 @@ class _EventBarState extends State<EventBar> {
                     ),
             ),
           ),
-          if (widget.isSelected) ...[
-            GestureDetector(
-              onTap: () => _showNotesDialog(context),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 2, vertical: 3),
-                child: Icon(Icons.radio_button_unchecked,
-                    size: 12, color: _nearBlack),
-              ),
+          // O and X stacked vertically when selected
+          if (widget.isSelected)
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () => _showNotesDialog(context),
+                  child: const Padding(
+                    padding: EdgeInsets.fromLTRB(2, 2, 4, 1),
+                    child: Icon(Icons.radio_button_unchecked,
+                        size: 11, color: _nearBlack),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () async {
+                    await deleteEvent(widget.event.id);
+                    widget.onDeleted();
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.fromLTRB(2, 1, 4, 2),
+                    child: Icon(Icons.close, size: 11, color: _nearBlack),
+                  ),
+                ),
+              ],
             ),
-            GestureDetector(
-              onTap: () async {
-                await deleteEvent(widget.event.id);
-                widget.onDeleted();
-              },
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 2, vertical: 3),
-                child: Icon(Icons.close, size: 12, color: _nearBlack),
-              ),
-            ),
-          ],
         ],
       ),
     );

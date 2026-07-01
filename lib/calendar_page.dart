@@ -38,7 +38,7 @@ class _CalendarPageState extends State<CalendarPage> {
 
   Future<void> _loadEvents() async {
     final start = _topLeftDay;
-    final end = start.add(const Duration(days: 34));
+    final end = start.add(const Duration(days: 28));
     final events = await fetchEventsForRange(_isoDate(start), _isoDate(end));
     final map = <String, List<Event>>{};
     for (final e in events) {
@@ -50,12 +50,23 @@ class _CalendarPageState extends State<CalendarPage> {
     if (mounted) setState(() => _eventsByDate = map);
   }
 
+  bool _isValidTime(String t) {
+    if (t.isEmpty) return false;
+    final parts = t.split(':');
+    if (parts.length != 2) return false;
+    final h = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+    return h != null && m != null;
+  }
+
   void _sortEvents(List<Event> list) {
     list.sort((a, b) {
-      if (a.time.isEmpty && b.time.isEmpty) return 0;
-      if (a.time.isEmpty) return 1;
-      if (b.time.isEmpty) return -1;
-      return a.time.compareTo(b.time);
+      final aValid = _isValidTime(a.time);
+      final bValid = _isValidTime(b.time);
+      if (aValid && bValid) return a.time.compareTo(b.time);
+      if (aValid) return -1;
+      if (bValid) return 1;
+      return 0;
     });
   }
 
@@ -181,14 +192,15 @@ class _CalendarPageState extends State<CalendarPage> {
       child: LayoutBuilder(builder: (context, constraints) {
         final cellWidth = constraints.maxWidth / 7;
         return Column(
-          children: List.generate(5, (row) {
+          children: List.generate(4, (row) {
             int maxEvents = 0;
             for (int col = 0; col < 7; col++) {
               final day = topLeft.add(Duration(days: row * 7 + col));
               final count = _eventsByDate[_isoDate(day)]?.length ?? 0;
               if (count > maxEvents) maxEvents = count;
             }
-            final int flex = maxEvents > 5 ? maxEvents : 5;
+            // flex represents content height: 24px per event + 30px header, min 80
+            final int flex = (maxEvents * 24 + 30).clamp(80, 9999);
 
             return Expanded(
               flex: flex,
@@ -206,6 +218,7 @@ class _CalendarPageState extends State<CalendarPage> {
                       dateStr: dateStr,
                       isToday: dateStr == todayStr,
                       events: events,
+                      showWeekday: row == 0,
                       selectedEventId: _selectedEventId,
                       editingEventId: _editingEventId,
                       onEventCreated: _onEventCreated,
