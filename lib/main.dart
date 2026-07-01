@@ -17,7 +17,7 @@ class CalendarApp extends StatelessWidget {
       title: 'Calendar',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFc9a300),
+        scaffoldBackgroundColor: kBgColor,
         fontFamily: 'monospace',
       ),
       home: const CalendarPage(),

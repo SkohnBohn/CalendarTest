@@ -15,13 +15,14 @@ Future<List<Event>> fetchEventsForRange(
   return rows.map(Event.fromMap).toList();
 }
 
-Future<Event> createEvent(String date, String time, String text) async {
+Future<Event> createEvent(String date) async {
   final db = await getDb();
   final event = Event(
     id: _uuid.v4(),
     date: date,
-    time: time,
-    text: text,
+    time: '',
+    text: '',
+    notes: '',
     updatedAt: DateTime.now().toIso8601String(),
   );
   await db.insert('events', event.toMap());

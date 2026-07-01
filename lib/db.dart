@@ -16,7 +16,7 @@ Future<Database> getDb() async {
 
   _db = await openDatabase(
     dbPath,
-    version: 1,
+    version: 2,
     onCreate: (db, version) async {
       await db.execute('''
         CREATE TABLE events (
@@ -24,9 +24,16 @@ Future<Database> getDb() async {
           date TEXT NOT NULL,
           time TEXT NOT NULL,
           text TEXT NOT NULL,
+          notes TEXT NOT NULL DEFAULT '',
           updated_at TEXT NOT NULL
         )
       ''');
+    },
+    onUpgrade: (db, oldVersion, newVersion) async {
+      if (oldVersion < 2) {
+        await db.execute(
+            "ALTER TABLE events ADD COLUMN notes TEXT NOT NULL DEFAULT ''");
+      }
     },
   );
   return _db!;
