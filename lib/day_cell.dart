@@ -42,7 +42,7 @@ class DayCell extends StatelessWidget {
 
   Future<void> _handleTapEmpty(BuildContext context) async {
     onClearSelection();
-    final event = await createEvent(dateStr, '', '');
+    final event = await createEvent(dateStr);
     onEventCreated(event);
   }
 

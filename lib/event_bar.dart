@@ -284,7 +284,7 @@ class _EventBarState extends State<EventBar> {
                     ),
             ),
           ),
-          if (widget.isSelected) ..[
+          if (widget.isSelected) ...[
             GestureDetector(
               onTap: () => _showNotesDialog(context),
               child: const Padding(
