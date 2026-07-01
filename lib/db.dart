@@ -32,7 +32,7 @@ Future<Database> getDb() async {
     onUpgrade: (db, oldVersion, newVersion) async {
       if (oldVersion < 2) {
         await db.execute(
-            "ALTER TABLE events ADD COLUMN notes TEXT NOT NULL DEFAULT ''");
+            'ALTER TABLE events ADD COLUMN notes TEXT NOT NULL DEFAULT ""');
       }
     },
   );

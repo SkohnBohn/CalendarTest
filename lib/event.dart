@@ -11,7 +11,7 @@ class Event {
     required this.date,
     required this.time,
     required this.text,
-    required this.notes,
+    this.notes = '',
     required this.updatedAt,
   });
 
@@ -20,7 +20,7 @@ class Event {
         date: m['date'] as String,
         time: m['time'] as String,
         text: m['text'] as String,
-        notes: m['notes'] as String? ?? '',
+        notes: (m['notes'] as String?) ?? '',
         updatedAt: m['updated_at'] as String,
       );
 

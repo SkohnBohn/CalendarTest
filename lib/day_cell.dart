@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'event.dart';
 import 'event_store.dart';
 import 'event_bar.dart';
-import 'calendar_page.dart' show kBgColor, kNearBlack;
 
+const _bgColor = Color(0xFFf7c90f);
+const _nearBlack = Color(0xFF2b2b2b);
 const _lightGrey = Color(0xFFb0b0b0);
-const _todayCircle = Color(0xFFfde68a); // light yellow for today
-const _dragHover = Color(0xFFf0d840);
+const _todayCircleColor = Color(0xFFFFE55C);
 
-const _weekdayShort = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const _weekdayLabels = ['Mo', 'Tue', 'Wed', 'Thu', 'Fri', 'Sa', 'Sun'];
 
 class DayCell extends StatelessWidget {
   final DateTime date;
@@ -22,7 +22,7 @@ class DayCell extends StatelessWidget {
   final void Function(String id, String date) onEventDeleted;
   final void Function(String? id) onSelectEvent;
   final VoidCallback onClearSelection;
-  final Future<void> Function(Event, String newDateStr) onEventMoved;
+  final Future<void> Function(Event, String) onEventMoved;
 
   const DayCell({
     super.key,
@@ -40,68 +40,68 @@ class DayCell extends StatelessWidget {
     required this.onEventMoved,
   });
 
-  Future<void> _handleTapEmpty() async {
+  Future<void> _handleTapEmpty(BuildContext context) async {
     onClearSelection();
-    final event = await createEvent(dateStr);
+    final event = await createEvent(dateStr, '', '');
     onEventCreated(event);
   }
 
   @override
   Widget build(BuildContext context) {
-    final weekday = _weekdayShort[date.weekday - 1];
+    final weekdayLabel = _weekdayLabels[date.weekday - 1];
 
     return DragTarget<Event>(
-      onWillAcceptWithDetails: (details) => true,
+      onWillAcceptWithDetails: (details) => details.data.date != dateStr,
       onAcceptWithDetails: (details) => onEventMoved(details.data, dateStr),
-      builder: (context, candidateData, _) {
-        final isHovered = candidateData.isNotEmpty;
+      builder: (context, candidateData, rejectedData) {
         return GestureDetector(
-          onTap: _handleTapEmpty,
+          onTap: () => _handleTapEmpty(context),
           behavior: HitTestBehavior.opaque,
           child: Container(
             decoration: BoxDecoration(
               border:
                   Border.all(color: _lightGrey.withOpacity(0.5), width: 0.5),
-              color: isHovered ? _dragHover : kBgColor,
+              color: candidateData.isNotEmpty
+                  ? _bgColor.withOpacity(0.7)
+                  : _bgColor,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Day number + weekday label on same row
                 Padding(
-                  padding: const EdgeInsets.only(left: 4, top: 3, bottom: 1),
+                  padding:
+                      const EdgeInsets.only(left: 4, top: 2, bottom: 1),
                   child: Row(
                     children: [
-                      if (isToday)
-                        Container(
-                          width: 20,
-                          height: 20,
-                          decoration: const BoxDecoration(
-                            color: _todayCircle,
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            '${date.day}',
-                            style: const TextStyle(
-                              color: kNearBlack,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                      isToday
+                          ? Container(
+                              width: 22,
+                              height: 22,
+                              decoration: const BoxDecoration(
+                                color: _todayCircleColor,
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                '${date.day}',
+                                style: const TextStyle(
+                                  color: _nearBlack,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            )
+                          : Text(
+                              '${date.day}',
+                              style: const TextStyle(
+                                color: _nearBlack,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                        )
-                      else
-                        Text(
-                          '${date.day}',
-                          style: const TextStyle(
-                            color: kNearBlack,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
                       const SizedBox(width: 3),
                       Text(
-                        weekday,
+                        weekdayLabel,
                         style: const TextStyle(
                           color: _lightGrey,
                           fontSize: 9,
@@ -111,27 +111,64 @@ class DayCell extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Event bars
                 Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: SingleChildScrollView(
                     physics: const NeverScrollableScrollPhysics(),
-                    children: events.map((event) {
-                      final isSelected = event.id == selectedEventId;
-                      final isEditing = event.id == editingEventId;
-                      return GestureDetector(
-                        onTap: () => onSelectEvent(event.id),
-                        child: EventBar(
-                          key: ValueKey(event.id),
-                          event: event,
-                          isSelected: isSelected,
-                          isEditing: isEditing,
-                          onUpdated: () => onEventUpdated(event),
-                          onDeleted: () =>
-                              onEventDeleted(event.id, event.date),
-                        ),
-                      );
-                    }).toList(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: events.map((event) {
+                        final isSelected = event.id == selectedEventId;
+                        final isEditing = event.id == editingEventId;
+                        return LongPressDraggable<Event>(
+                          key: ValueKey('drag_${event.id}'),
+                          data: event,
+                          feedback: Material(
+                            elevation: 4,
+                            color: Colors.transparent,
+                            child: Container(
+                              width: 120,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFe0c840),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                '${event.time} ${event.text}'.trim(),
+                                style: const TextStyle(
+                                    fontSize: 11, color: _nearBlack),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          childWhenDragging: Opacity(
+                            opacity: 0.3,
+                            child: EventBar(
+                              key: ValueKey('shadow_${event.id}'),
+                              event: event,
+                              isSelected: false,
+                              isEditing: false,
+                              onUpdated: () {},
+                              onDeleted: () {},
+                            ),
+                          ),
+                          child: GestureDetector(
+                            onTap: () => onSelectEvent(event.id),
+                            child: EventBar(
+                              key: ValueKey(event.id),
+                              event: event,
+                              isSelected: isSelected,
+                              isEditing: isEditing,
+                              onUpdated: () => onEventUpdated(event),
+                              onDeleted: () =>
+                                  onEventDeleted(event.id, event.date),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   ),
                 ),
               ],
