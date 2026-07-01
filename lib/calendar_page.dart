@@ -161,7 +161,8 @@ class _CalendarPageState extends State<CalendarPage> {
               setState(() => _weekOffset -= 4);
               _loadEvents();
             },
-            icon: const Icon(Icons.chevron_left, color: _nearBlack),
+            icon: Icon(Icons.chevron_left,
+                color: _nearBlack.withOpacity(0.25)),
           ),
           Expanded(
             child: Text(
@@ -179,7 +180,8 @@ class _CalendarPageState extends State<CalendarPage> {
               setState(() => _weekOffset += 4);
               _loadEvents();
             },
-            icon: const Icon(Icons.chevron_right, color: _nearBlack),
+            icon: Icon(Icons.chevron_right,
+                color: _nearBlack.withOpacity(0.25)),
           ),
         ],
       ),
@@ -191,6 +193,12 @@ class _CalendarPageState extends State<CalendarPage> {
       padding: const EdgeInsets.symmetric(horizontal: 19),
       child: LayoutBuilder(builder: (context, constraints) {
         final cellWidth = constraints.maxWidth / 7;
+        // Base height each row gets when all are equal
+        final baseRowHeight = constraints.maxHeight / 4.0;
+        // Each event bar ~24px, header ~28px
+        const eventBarH = 24.0;
+        const headerH = 28.0;
+
         return Column(
           children: List.generate(4, (row) {
             int maxEvents = 0;
@@ -199,8 +207,11 @@ class _CalendarPageState extends State<CalendarPage> {
               final count = _eventsByDate[_isoDate(day)]?.length ?? 0;
               if (count > maxEvents) maxEvents = count;
             }
-            // flex represents content height: 24px per event + 30px header, min 80
-            final int flex = (maxEvents * 24 + 30).clamp(80, 9999);
+            final contentNeeded = maxEvents * eventBarH + headerH;
+            // Only grow beyond equal share when content truly overflows it
+            final int flex = contentNeeded > baseRowHeight
+                ? contentNeeded.ceil()
+                : 80;
 
             return Expanded(
               flex: flex,

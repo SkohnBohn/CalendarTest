@@ -69,13 +69,12 @@ class DayCell extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(left: 4, top: 2, bottom: 1),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       isToday
                           ? Container(
-                              width: 22,
-                              height: 22,
+                              width: 18,
+                              height: 18,
                               decoration: const BoxDecoration(
                                 color: _todayCircleColor,
                                 shape: BoxShape.circle,
@@ -85,7 +84,7 @@ class DayCell extends StatelessWidget {
                                 '${date.day}',
                                 style: const TextStyle(
                                   color: _nearBlack,
-                                  fontSize: 13,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -98,7 +97,7 @@ class DayCell extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                      if (showWeekday) ...[  
+                      if (showWeekday) ...[
                         const SizedBox(width: 3),
                         Text(
                           weekdayLabel,
@@ -112,7 +111,6 @@ class DayCell extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Events – no scrolling, column grows with content
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,

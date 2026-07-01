@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'event.dart';
 import 'event_store.dart';
 
 const _nearBlack = Color(0xFF2b2b2b);
 const _barColor = Color(0xFFfef08a);
 const _notesBgColor = Color(0xFFfce17a);
+const _buttonColor = Color(0x42000000); // very faded
 
 const _eventStyle = TextStyle(
   fontSize: 12,
@@ -39,6 +41,7 @@ class _EventBarState extends State<EventBar> {
   late TextEditingController _notesCtrl;
   late FocusNode _timeFocus;
   late FocusNode _textFocus;
+  bool _isHovered = false;
 
   @override
   void initState() {
@@ -78,7 +81,7 @@ class _EventBarState extends State<EventBar> {
   }
 
   Future<void> _save() async {
-    widget.event.time = _timeCtrl.text;
+    widget.event.time = _timeCtrl.text.trim();
     widget.event.text = _textCtrl.text;
     widget.event.notes = _notesCtrl.text;
     await updateEvent(widget.event);
@@ -94,49 +97,63 @@ class _EventBarState extends State<EventBar> {
 
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: _notesBgColor,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                headerText,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: _nearBlack,
+      builder: (ctx) {
+        void saveAndClose() {
+          _save();
+          if (ctx.mounted) Navigator.pop(ctx);
+        }
+
+        return Dialog(
+          backgroundColor: _notesBgColor,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  headerText,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: _nearBlack,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _notesCtrl,
-                maxLines: null,
-                autofocus: true,
-                style: const TextStyle(fontSize: 13, color: _nearBlack),
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  hintText: '',
-                ),
-              ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: IconButton(
-                  onPressed: () {
-                    _save();
-                    Navigator.pop(ctx);
+                const SizedBox(height: 8),
+                KeyboardListener(
+                  focusNode: FocusNode(),
+                  onKeyEvent: (event) {
+                    if (event is KeyDownEvent &&
+                        event.logicalKey == LogicalKeyboardKey.enter) {
+                      saveAndClose();
+                    }
                   },
-                  icon: const Icon(Icons.check, color: _nearBlack, size: 18),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  child: TextField(
+                    controller: _notesCtrl,
+                    maxLines: null,
+                    autofocus: true,
+                    style: const TextStyle(fontSize: 13, color: _nearBlack),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      hintText: '',
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    onPressed: saveAndClose,
+                    icon: const Icon(Icons.check,
+                        color: _nearBlack, size: 18),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -154,101 +171,124 @@ class _EventBarState extends State<EventBar> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 2),
-      constraints: const BoxConstraints(minHeight: 22),
-      decoration: BoxDecoration(
-        color: _barColor,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Time field
-          Padding(
-            padding: const EdgeInsets.only(left: 4, top: 3),
-            child: widget.isEditing
-                ? SizedBox(
-                    width: 38,
-                    child: TextField(
-                      controller: _timeCtrl,
-                      focusNode: _timeFocus,
-                      style: _eventStyle,
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 0, vertical: 1),
-                        border: InputBorder.none,
-                        hintText: 'hh:mm',
-                        hintStyle:
-                            TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                      onSubmitted: (_) => _textFocus.requestFocus(),
-                    ),
-                  )
-                : Text(
-                    widget.event.time.isNotEmpty
-                        ? widget.event.time
-                        : 'hh:mm',
-                    style: _eventStyle.copyWith(
-                      color: widget.event.time.isNotEmpty
-                          ? _nearBlack
-                          : Colors.grey,
-                    ),
-                  ),
-          ),
-          // Label field
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 4, top: 3, bottom: 3),
-              child: widget.isEditing
-                  ? TextField(
-                      controller: _textCtrl,
-                      focusNode: _textFocus,
-                      maxLines: null,
-                      style: _eventStyle,
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                        border: InputBorder.none,
-                        hintText: '',
-                      ),
-                      onSubmitted: (_) => _save(),
-                    )
-                  : Text(
-                      widget.event.text,
-                      style: _eventStyle,
-                      softWrap: true,
-                      maxLines: 3,
-                    ),
-            ),
-          ),
-          // O and X stacked vertically when selected
-          if (widget.isSelected)
-            Column(
-              mainAxisSize: MainAxisSize.min,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 2),
+        constraints: const BoxConstraints(minHeight: 22),
+        decoration: BoxDecoration(
+          color: _barColor,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Main row: time + label
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GestureDetector(
-                  onTap: () => _showNotesDialog(context),
-                  child: const Padding(
-                    padding: EdgeInsets.fromLTRB(2, 2, 4, 1),
-                    child: Icon(Icons.radio_button_unchecked,
-                        size: 11, color: _nearBlack),
-                  ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, top: 3),
+                  child: widget.isEditing
+                      ? SizedBox(
+                          width: 38,
+                          child: TextField(
+                            controller: _timeCtrl,
+                            focusNode: _timeFocus,
+                            style: _eventStyle,
+                            maxLines: 1,
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 0, vertical: 1),
+                              border: InputBorder.none,
+                              hintText: '',
+                            ),
+                            onChanged: (val) {
+                              if (val.endsWith(' ')) {
+                                _timeCtrl.text = val.trimRight();
+                                _timeCtrl.selection =
+                                    TextSelection.fromPosition(TextPosition(
+                                        offset: _timeCtrl.text.length));
+                                _textFocus.requestFocus();
+                              }
+                            },
+                            onSubmitted: (_) => _textFocus.requestFocus(),
+                          ),
+                        )
+                      : Text(
+                          widget.event.time.isNotEmpty
+                              ? widget.event.time
+                              : 'hh:mm',
+                          style: _eventStyle.copyWith(
+                            color: widget.event.time.isNotEmpty
+                                ? _nearBlack
+                                : Colors.grey,
+                          ),
+                        ),
                 ),
-                GestureDetector(
-                  onTap: () async {
-                    await deleteEvent(widget.event.id);
-                    widget.onDeleted();
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.fromLTRB(2, 1, 4, 2),
-                    child: Icon(Icons.close, size: 11, color: _nearBlack),
+                Expanded(
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.only(left: 4, top: 3, bottom: 3),
+                    child: widget.isEditing
+                        ? TextField(
+                            controller: _textCtrl,
+                            focusNode: _textFocus,
+                            maxLines: 1,
+                            style: _eventStyle,
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                              border: InputBorder.none,
+                              hintText: '',
+                            ),
+                            onSubmitted: (_) => _save(),
+                          )
+                        : Text(
+                            widget.event.text,
+                            style: _eventStyle,
+                            softWrap: true,
+                            maxLines: 3,
+                          ),
                   ),
                 ),
               ],
             ),
-        ],
+            // Hover row: O and X below the time, very faded
+            if (_isHovered)
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () => _showNotesDialog(context),
+                      child: const Icon(
+                        Icons.radio_button_unchecked,
+                        size: 11,
+                        color: _buttonColor,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: () async {
+                        await deleteEvent(widget.event.id);
+                        widget.onDeleted();
+                      },
+                      child: const Icon(
+                        Icons.close,
+                        size: 11,
+                        color: _buttonColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
