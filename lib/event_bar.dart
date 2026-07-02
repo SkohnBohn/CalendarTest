@@ -22,7 +22,6 @@ class EventBar extends StatefulWidget {
   final VoidCallback onUpdated;
   final VoidCallback onDeleted;
   final VoidCallback onDoneEditing;
-  final void Function(bool) onHoverChanged;
 
   const EventBar({
     super.key,
@@ -32,7 +31,6 @@ class EventBar extends StatefulWidget {
     required this.onUpdated,
     required this.onDeleted,
     required this.onDoneEditing,
-    required this.onHoverChanged,
   });
 
   @override
@@ -350,14 +348,8 @@ class _EventBarState extends State<EventBar> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onEnter: (_) {
-        setState(() => _isHovered = true);
-        widget.onHoverChanged(true);
-      },
-      onExit: (_) {
-        setState(() => _isHovered = false);
-        widget.onHoverChanged(false);
-      },
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 2),
         constraints: const BoxConstraints(minHeight: 22),
@@ -365,11 +357,10 @@ class _EventBarState extends State<EventBar> {
           color: _barColor,
           borderRadius: BorderRadius.circular(6),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+        // Stack: buttons are Positioned so they don't affect the bar's height
+        child: Stack(
           children: [
-            // Main row: time + label
+            // Main content row (determines height)
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -409,7 +400,7 @@ class _EventBarState extends State<EventBar> {
                 Expanded(
                   child: Padding(
                     padding:
-                        const EdgeInsets.only(left: 4, top: 3, bottom: 3),
+                        const EdgeInsets.only(left: 4, top: 3, bottom: 16),
                     child: widget.isEditing
                         ? TextField(
                             controller: _textCtrl,
@@ -434,14 +425,14 @@ class _EventBarState extends State<EventBar> {
                 ),
               ],
             ),
-            // Hover row: O  :  X
+            // Hover buttons: Positioned at bottom-left, no layout impact
             if (_isHovered)
-              Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 2),
+              Positioned(
+                left: 4,
+                bottom: 2,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // O — notes
                     GestureDetector(
                       onTap: () => _showNotesDialog(context),
                       child: const Icon(
@@ -451,7 +442,6 @@ class _EventBarState extends State<EventBar> {
                       ),
                     ),
                     const SizedBox(width: 5),
-                    // : — recurrence
                     GestureDetector(
                       onTap: () => _showRecurrenceDialog(context),
                       child: const Text(
@@ -464,7 +454,6 @@ class _EventBarState extends State<EventBar> {
                       ),
                     ),
                     const SizedBox(width: 5),
-                    // X — delete
                     GestureDetector(
                       onTap: () async {
                         await deleteEvent(widget.event.id);
