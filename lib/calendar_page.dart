@@ -18,6 +18,7 @@ class _CalendarPageState extends State<CalendarPage> {
   Map<String, List<Event>> _eventsByDate = {};
   String? _selectedEventId;
   String? _editingEventId;
+  String? _hoveredDate;
 
   @override
   void initState() {
@@ -198,18 +199,20 @@ class _CalendarPageState extends State<CalendarPage> {
         final baseRowHeight = constraints.maxHeight / 4.0;
         const eventBarH = 24.0;
         const headerH = 28.0;
-        // Reserve space for hover button row so it never overflows
-        const hoverRowH = 16.0;
 
         return Column(
           children: List.generate(4, (row) {
             int maxEvents = 0;
+            bool rowIsHovered = false;
             for (int col = 0; col < 7; col++) {
               final day = topLeft.add(Duration(days: row * 7 + col));
-              final count = _eventsByDate[_isoDate(day)]?.length ?? 0;
+              final dateStr = _isoDate(day);
+              final count = _eventsByDate[dateStr]?.length ?? 0;
               if (count > maxEvents) maxEvents = count;
+              if (_hoveredDate == dateStr) rowIsHovered = true;
             }
-            final hoverExtra = maxEvents > 0 ? hoverRowH : 0.0;
+            // Grow by exactly one bar height while any event in this row is hovered
+            final hoverExtra = rowIsHovered ? eventBarH : 0.0;
             final contentNeeded =
                 maxEvents * eventBarH + headerH + hoverExtra;
             final int flex = contentNeeded > baseRowHeight
@@ -241,6 +244,8 @@ class _CalendarPageState extends State<CalendarPage> {
                       onSelectEvent: _onSelectEvent,
                       onClearSelection: _clearSelection,
                       onDoneEditing: _clearSelection,
+                      onHoverChanged: (hovered) => setState(
+                          () => _hoveredDate = hovered ? dateStr : null),
                       onEventMoved: _onEventMoved,
                     ),
                   );

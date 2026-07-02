@@ -22,6 +22,7 @@ class EventBar extends StatefulWidget {
   final VoidCallback onUpdated;
   final VoidCallback onDeleted;
   final VoidCallback onDoneEditing;
+  final void Function(bool) onHoverChanged;
 
   const EventBar({
     super.key,
@@ -31,6 +32,7 @@ class EventBar extends StatefulWidget {
     required this.onUpdated,
     required this.onDeleted,
     required this.onDoneEditing,
+    required this.onHoverChanged,
   });
 
   @override
@@ -348,8 +350,14 @@ class _EventBarState extends State<EventBar> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
+      onEnter: (_) {
+        setState(() => _isHovered = true);
+        widget.onHoverChanged(true);
+      },
+      onExit: (_) {
+        setState(() => _isHovered = false);
+        widget.onHoverChanged(false);
+      },
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 2),
         constraints: const BoxConstraints(minHeight: 22),

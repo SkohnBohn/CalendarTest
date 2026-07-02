@@ -23,6 +23,7 @@ class DayCell extends StatelessWidget {
   final void Function(String? id) onSelectEvent;
   final VoidCallback onClearSelection;
   final VoidCallback onDoneEditing;
+  final void Function(bool) onHoverChanged;
   final Future<void> Function(Event, String) onEventMoved;
 
   const DayCell({
@@ -40,6 +41,7 @@ class DayCell extends StatelessWidget {
     required this.onSelectEvent,
     required this.onClearSelection,
     required this.onDoneEditing,
+    required this.onHoverChanged,
     required this.onEventMoved,
   });
 
@@ -152,6 +154,7 @@ class DayCell extends StatelessWidget {
                           onUpdated: () {},
                           onDeleted: () {},
                           onDoneEditing: () {},
+                          onHoverChanged: (_) {},
                         ),
                       ),
                       child: GestureDetector(
@@ -165,6 +168,7 @@ class DayCell extends StatelessWidget {
                           onDeleted: () =>
                               onEventDeleted(event.id, event.date),
                           onDoneEditing: onDoneEditing,
+                          onHoverChanged: onHoverChanged,
                         ),
                       ),
                     );
