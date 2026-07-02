@@ -5,6 +5,10 @@ class Event {
   String text;
   String notes;
   String updatedAt;
+  String recurrenceType;     // 'none' | 'weekly' | 'monthly' | 'yearly' | 'custom'
+  int recurrenceInterval;    // days between for 'custom'
+  String recurrenceUntil;    // DD/MM/YY input stored as-is
+  String parentId;           // '' for master/standalone, parent event id for clones
 
   Event({
     required this.id,
@@ -13,6 +17,10 @@ class Event {
     required this.text,
     this.notes = '',
     required this.updatedAt,
+    this.recurrenceType = 'none',
+    this.recurrenceInterval = 0,
+    this.recurrenceUntil = '',
+    this.parentId = '',
   });
 
   factory Event.fromMap(Map<String, dynamic> m) => Event(
@@ -22,6 +30,10 @@ class Event {
         text: m['text'] as String,
         notes: (m['notes'] as String?) ?? '',
         updatedAt: m['updated_at'] as String,
+        recurrenceType: (m['recurrence_type'] as String?) ?? 'none',
+        recurrenceInterval: (m['recurrence_interval'] as int?) ?? 0,
+        recurrenceUntil: (m['recurrence_until'] as String?) ?? '',
+        parentId: (m['parent_id'] as String?) ?? '',
       );
 
   Map<String, dynamic> toMap() => {
@@ -31,5 +43,9 @@ class Event {
         'text': text,
         'notes': notes,
         'updated_at': updatedAt,
+        'recurrence_type': recurrenceType,
+        'recurrence_interval': recurrenceInterval,
+        'recurrence_until': recurrenceUntil,
+        'parent_id': parentId,
       };
 }

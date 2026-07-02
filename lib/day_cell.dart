@@ -5,7 +5,6 @@ import 'event_bar.dart';
 
 const _bgColor = Color(0xFFf7c90f);
 const _nearBlack = Color(0xFF2b2b2b);
-const _lightGrey = Color(0xFFb0b0b0);
 const _todayCircleColor = Color(0xFFFFE55C);
 
 const _weekdayLabels = ['MO', 'TUE', 'WED', 'THU', 'FRI', 'SA', 'SUN'];
@@ -23,6 +22,7 @@ class DayCell extends StatelessWidget {
   final void Function(String id, String date) onEventDeleted;
   final void Function(String? id) onSelectEvent;
   final VoidCallback onClearSelection;
+  final VoidCallback onDoneEditing;
   final Future<void> Function(Event, String) onEventMoved;
 
   const DayCell({
@@ -39,6 +39,7 @@ class DayCell extends StatelessWidget {
     required this.onEventDeleted,
     required this.onSelectEvent,
     required this.onClearSelection,
+    required this.onDoneEditing,
     required this.onEventMoved,
   });
 
@@ -150,6 +151,7 @@ class DayCell extends StatelessWidget {
                           isEditing: false,
                           onUpdated: () {},
                           onDeleted: () {},
+                          onDoneEditing: () {},
                         ),
                       ),
                       child: GestureDetector(
@@ -162,6 +164,7 @@ class DayCell extends StatelessWidget {
                           onUpdated: () => onEventUpdated(event),
                           onDeleted: () =>
                               onEventDeleted(event.id, event.date),
+                          onDoneEditing: onDoneEditing,
                         ),
                       ),
                     );

@@ -16,7 +16,7 @@ Future<Database> getDb() async {
 
   _db = await openDatabase(
     dbPath,
-    version: 2,
+    version: 3,
     onCreate: (db, version) async {
       await db.execute('''
         CREATE TABLE events (
@@ -25,7 +25,11 @@ Future<Database> getDb() async {
           time TEXT NOT NULL,
           text TEXT NOT NULL,
           notes TEXT NOT NULL DEFAULT '',
-          updated_at TEXT NOT NULL
+          updated_at TEXT NOT NULL,
+          recurrence_type TEXT NOT NULL DEFAULT 'none',
+          recurrence_interval INTEGER NOT NULL DEFAULT 0,
+          recurrence_until TEXT NOT NULL DEFAULT '',
+          parent_id TEXT NOT NULL DEFAULT ''
         )
       ''');
     },
@@ -33,6 +37,16 @@ Future<Database> getDb() async {
       if (oldVersion < 2) {
         await db.execute(
             'ALTER TABLE events ADD COLUMN notes TEXT NOT NULL DEFAULT ""');
+      }
+      if (oldVersion < 3) {
+        await db.execute(
+            'ALTER TABLE events ADD COLUMN recurrence_type TEXT NOT NULL DEFAULT "none"');
+        await db.execute(
+            'ALTER TABLE events ADD COLUMN recurrence_interval INTEGER NOT NULL DEFAULT 0');
+        await db.execute(
+            'ALTER TABLE events ADD COLUMN recurrence_until TEXT NOT NULL DEFAULT ""');
+        await db.execute(
+            'ALTER TABLE events ADD COLUMN parent_id TEXT NOT NULL DEFAULT ""');
       }
     },
   );

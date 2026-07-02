@@ -6,7 +6,7 @@ import 'event_store.dart';
 const _nearBlack = Color(0xFF2b2b2b);
 const _barColor = Color(0xFFfef08a);
 const _notesBgColor = Color(0xFFfce17a);
-const _buttonColor = Color(0x42000000); // very faded
+const _buttonColor = Color(0x42000000);
 
 const _eventStyle = TextStyle(
   fontSize: 12,
@@ -21,6 +21,7 @@ class EventBar extends StatefulWidget {
   final bool isEditing;
   final VoidCallback onUpdated;
   final VoidCallback onDeleted;
+  final VoidCallback onDoneEditing;
 
   const EventBar({
     super.key,
@@ -29,6 +30,7 @@ class EventBar extends StatefulWidget {
     required this.isEditing,
     required this.onUpdated,
     required this.onDeleted,
+    required this.onDoneEditing,
   });
 
   @override
@@ -88,6 +90,11 @@ class _EventBarState extends State<EventBar> {
     widget.onUpdated();
   }
 
+  Future<void> _saveAndDone() async {
+    await _save();
+    widget.onDoneEditing();
+  }
+
   void _showNotesDialog(BuildContext context) {
     final parts = [
       if (widget.event.time.isNotEmpty) widget.event.time,
@@ -143,8 +150,7 @@ class _EventBarState extends State<EventBar> {
                   alignment: Alignment.centerRight,
                   child: IconButton(
                     onPressed: saveAndClose,
-                    icon: const Icon(Icons.check,
-                        color: _nearBlack, size: 18),
+                    icon: const Icon(Icons.check, color: _nearBlack, size: 18),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -152,6 +158,176 @@ class _EventBarState extends State<EventBar> {
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  void _showRecurrenceDialog(BuildContext context) {
+    String rType = widget.event.recurrenceType;
+    final customCtrl = TextEditingController(
+      text: widget.event.recurrenceInterval > 0
+          ? '${widget.event.recurrenceInterval}'
+          : '',
+    );
+    final untilCtrl =
+        TextEditingController(text: widget.event.recurrenceUntil);
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDlg) {
+            final header = [widget.event.time, widget.event.text]
+                .where((s) => s.isNotEmpty)
+                .join('  ');
+            return Dialog(
+              backgroundColor: _notesBgColor,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header: time + text
+                    Text(
+                      header.isNotEmpty ? header : '–',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: _nearBlack,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // W M Y C buttons
+                    Row(
+                      children: [
+                        for (final entry in [
+                          ('weekly', 'W'),
+                          ('monthly', 'M'),
+                          ('yearly', 'Y'),
+                          ('custom', 'C'),
+                        ])
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: GestureDetector(
+                              onTap: () => setDlg(() {
+                                rType = rType == entry.$1 ? 'none' : entry.$1;
+                              }),
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: rType == entry.$1
+                                      ? _nearBlack
+                                      : Colors.transparent,
+                                  border: Border.all(
+                                      color: _nearBlack.withOpacity(0.3)),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  entry.$2,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: rType == entry.$1
+                                        ? _notesBgColor
+                                        : _nearBlack,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    // Custom interval input
+                    if (rType == 'custom') ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Text('every  ',
+                              style: TextStyle(
+                                  fontSize: 12, color: _nearBlack)),
+                          SizedBox(
+                            width: 40,
+                            child: TextField(
+                              controller: customCtrl,
+                              autofocus: true,
+                              keyboardType: TextInputType.number,
+                              style: const TextStyle(
+                                  fontSize: 12, color: _nearBlack),
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 0, vertical: 2),
+                                border: InputBorder.none,
+                              ),
+                            ),
+                          ),
+                          const Text('  days',
+                              style: TextStyle(
+                                  fontSize: 12, color: _nearBlack)),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    // Until field
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          'until  ',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: _nearBlack.withOpacity(0.5)),
+                        ),
+                        SizedBox(
+                          width: 80,
+                          child: TextField(
+                            controller: untilCtrl,
+                            style: const TextStyle(
+                                fontSize: 12, color: _nearBlack),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 0, vertical: 2),
+                              border: InputBorder.none,
+                              hintText: 'DD/MM/YY',
+                              hintStyle: TextStyle(
+                                  color: _nearBlack.withOpacity(0.3),
+                                  fontSize: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: IconButton(
+                        onPressed: () async {
+                          widget.event.recurrenceType = rType;
+                          widget.event.recurrenceInterval =
+                              int.tryParse(customCtrl.text.trim()) ?? 0;
+                          widget.event.recurrenceUntil =
+                              untilCtrl.text.trim();
+                          await updateEvent(widget.event);
+                          await applyRecurrence(widget.event);
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (mounted) widget.onUpdated();
+                        },
+                        icon: const Icon(Icons.check,
+                            color: _nearBlack, size: 18),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -218,16 +394,9 @@ class _EventBarState extends State<EventBar> {
                             onSubmitted: (_) => _textFocus.requestFocus(),
                           ),
                         )
-                      : Text(
-                          widget.event.time.isNotEmpty
-                              ? widget.event.time
-                              : 'hh:mm',
-                          style: _eventStyle.copyWith(
-                            color: widget.event.time.isNotEmpty
-                                ? _nearBlack
-                                : Colors.grey,
-                          ),
-                        ),
+                      : widget.event.time.isNotEmpty
+                          ? Text(widget.event.time, style: _eventStyle)
+                          : const SizedBox.shrink(),
                 ),
                 Expanded(
                   child: Padding(
@@ -245,7 +414,7 @@ class _EventBarState extends State<EventBar> {
                               border: InputBorder.none,
                               hintText: '',
                             ),
-                            onSubmitted: (_) => _save(),
+                            onSubmitted: (_) => _saveAndDone(),
                           )
                         : Text(
                             widget.event.text,
@@ -257,13 +426,14 @@ class _EventBarState extends State<EventBar> {
                 ),
               ],
             ),
-            // Hover row: O and X below the time, very faded
+            // Hover row: O  :  X
             if (_isHovered)
               Padding(
                 padding: const EdgeInsets.only(left: 4, bottom: 2),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // O — notes
                     GestureDetector(
                       onTap: () => _showNotesDialog(context),
                       child: const Icon(
@@ -272,7 +442,21 @@ class _EventBarState extends State<EventBar> {
                         color: _buttonColor,
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 5),
+                    // : — recurrence
+                    GestureDetector(
+                      onTap: () => _showRecurrenceDialog(context),
+                      child: const Text(
+                        ':',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: _buttonColor,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    // X — delete
                     GestureDetector(
                       onTap: () async {
                         await deleteEvent(widget.event.id);

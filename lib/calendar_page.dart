@@ -90,15 +90,17 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   void _onEventUpdated(Event e) {
-    setState(() {
-      final list = _eventsByDate[e.date];
-      if (list != null) _sortEvents(list);
-    });
+    // Reload entire range so clones created by recurrence appear immediately
+    _loadEvents();
   }
 
   void _onEventDeleted(String id, String date) {
     setState(() {
       _eventsByDate[date]?.removeWhere((e) => e.id == id);
+      // Also remove any clones that were in the visible range
+      for (final list in _eventsByDate.values) {
+        list.removeWhere((e) => e.parentId == id);
+      }
       if (_selectedEventId == id) _selectedEventId = null;
       if (_editingEventId == id) _editingEventId = null;
     });
@@ -193,11 +195,11 @@ class _CalendarPageState extends State<CalendarPage> {
       padding: const EdgeInsets.symmetric(horizontal: 19),
       child: LayoutBuilder(builder: (context, constraints) {
         final cellWidth = constraints.maxWidth / 7;
-        // Base height each row gets when all are equal
         final baseRowHeight = constraints.maxHeight / 4.0;
-        // Each event bar ~24px, header ~28px
         const eventBarH = 24.0;
         const headerH = 28.0;
+        // Reserve space for hover button row so it never overflows
+        const hoverRowH = 16.0;
 
         return Column(
           children: List.generate(4, (row) {
@@ -207,8 +209,9 @@ class _CalendarPageState extends State<CalendarPage> {
               final count = _eventsByDate[_isoDate(day)]?.length ?? 0;
               if (count > maxEvents) maxEvents = count;
             }
-            final contentNeeded = maxEvents * eventBarH + headerH;
-            // Only grow beyond equal share when content truly overflows it
+            final hoverExtra = maxEvents > 0 ? hoverRowH : 0.0;
+            final contentNeeded =
+                maxEvents * eventBarH + headerH + hoverExtra;
             final int flex = contentNeeded > baseRowHeight
                 ? contentNeeded.ceil()
                 : 80;
@@ -237,6 +240,7 @@ class _CalendarPageState extends State<CalendarPage> {
                       onEventDeleted: _onEventDeleted,
                       onSelectEvent: _onSelectEvent,
                       onClearSelection: _clearSelection,
+                      onDoneEditing: _clearSelection,
                       onEventMoved: _onEventMoved,
                     ),
                   );
