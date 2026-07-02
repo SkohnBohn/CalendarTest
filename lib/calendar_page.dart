@@ -211,13 +211,15 @@ class _CalendarPageState extends State<CalendarPage> {
               if (count > maxEvents) maxEvents = count;
               if (_hoveredDate == dateStr) rowIsHovered = true;
             }
-            // Grow by exactly one bar height while any event in this row is hovered
-            final hoverExtra = rowIsHovered ? eventBarH : 0.0;
-            final contentNeeded =
-                maxEvents * eventBarH + headerH + hoverExtra;
-            final int flex = contentNeeded > baseRowHeight
-                ? contentNeeded.ceil()
-                : 80;
+            // Base flex uses real pixel value so hover delta stays proportional
+            final baseFlexUnit = baseRowHeight.ceil();
+            // Actual height of the O : X hover row (icon 11 + bottom padding 2 + margin)
+            const hoverRowH = 14;
+            final hoverExtra = rowIsHovered ? hoverRowH : 0;
+            final contentNeeded = maxEvents * eventBarH + headerH;
+            final int flex =
+                (contentNeeded > baseRowHeight ? contentNeeded.ceil() : baseFlexUnit)
+                + hoverExtra;
 
             return Expanded(
               flex: flex,
