@@ -214,10 +214,8 @@ class _CalendarPageState extends State<CalendarPage> {
             final baseFlexUnit = baseRowHeight.ceil();
             const hoverRowH = 14;
             final contentNeeded = maxEvents * eventBarH + headerH;
-            // Only grow for hover when content + hover row would actually overflow
-            final needsHoverGrowth =
-                rowIsHovered && (contentNeeded + hoverRowH > baseRowHeight);
-            final hoverExtra = needsHoverGrowth ? hoverRowH : 0;
+            // hoverExtra only when DayCell confirmed actual overflow (via onHoverChanged)
+            final hoverExtra = rowIsHovered ? hoverRowH : 0;
             final int flex =
                 (contentNeeded > baseRowHeight ? contentNeeded.ceil() : baseFlexUnit)
                 + hoverExtra;
